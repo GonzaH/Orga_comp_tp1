@@ -1,29 +1,38 @@
+#include <regdef.h>
+
 .text
 .align 2
-
 .ent modxd
-.frame $fp, 8, $ra
+.frame $fp, 32, $ra
 .cprestore 0
 modxd:
-beggining:  
+          # Creacion del stack
           subu $sp, $sp, 32
           sw $fp, 28($sp)
           sw $gp, 24($sp)
           move $fp, $sp
 
+          # Geteo de parametros
           sw $a0, 32($fp)
-          sw $a0, 16($fp)
-          sw $a1, 12($fp)
+          sw $a1, 28($fp)
 
+          
           lw $t0, 16($fp)
           lw $t1, 12($fp)
 
+          # Guardo el contenido de $t0 en $t2 para poder
+          # Ir decrementandolo sin perder el valor inicial
+          move $t0, $t2
+beggining:
+          # Le resto el valor que esta en t1 a t2, que puede
+          # tener el inicial o uno menor tras alguna iteracion
           sub $t1, $t2, $t1
+          # Si el resultado es mayor a cero vuelvo a iterar
           bgtz $t1, beggining
-          bne $t0, 0, fin_mod
-          and $t0, $t0, 0
+          # Sumo el valor negativo o 0 a t1 para obtener el modulo
 fin_mod:  add $t0, $t1
 
+          # Deshago el stack
           lw $fp, 28($sp)
           lw $ra, 8($sp)
           addu $sp, $sp, 8
@@ -36,46 +45,75 @@ fin_mod:  add $t0, $t1
 
           .end modxd
 
+.text
+.align 2
 .globl move_forward
 .ent move_forward
-.frame $fp, 8, $ra
+.frame $fp, 32, $ra
 .cprestore 0
 move_forward:
-        subu $sp, $sp, 40
-        sw	$ra, 32($sp)
-        sw $fp, 28($sp)
+        # Creacion del stack
+        subu $sp, $sp, 32
+        sw	$ra, 24($sp)
+        sw $fp, 20($sp)
         move $fp, $sp
 
-        sw $a0, 40($fp)
-        sw $a1, 36($fp)
-        sw $a2, 32($fp)
-        sw $a3, 28($fp)
-        sw $t0, 24($fp)
+        # Geteo de los parametros
+        sw $a0, 32($fp)
+        sw $a1, 28($fp)
+        sw $a2, 24($fp)
 
-        beq $a2, 0, north
-        beq $a2, 1, south 
-        beq $a2, 2, east 
-        beq $a2, 3, west
+        # Se cargan x e y, asi como o
+        lw $t2, 0($a0)
+        lw $t3, 4($a0)
+        lw $t4, 8($a0)
 
-west:   sub $a0, $a0, 1
-        sw $a0, 24($fp)
-        sw $a3, 8($fp)
-        b fin
-north:  sub $a1, $a1, 1
-        sw $a1, 24($fp)
-        sw $t0, 4($fp)
-        b fin
-south:  add $a1, $a1, 1
-        sw $a1, 24($fp)
-        sw $a3, 4($fp)
-        b fin
-east:   add $a0, $a0, 1
-        sw $a0, 24($fp)
-        sw $t0, 8($fp)
-fin:    la $t1, modxd
+        # Se hace un branch segun que orientacion tiene
+        beq $t4, 0, north
+        beq $t4, 1, south 
+        beq $t4, 2, east 
+        beq $t4, 3, west
+
+        # Cada punto cardinal sabe con que parametros llamar a modulo,
+        # si debe aumentar o decrementar y en que coordenada 
+        # Voy a documentar solo west, el resto es analogo cambiando de
+        # direccion o si es suma o resta
+        # Aqui guardo el primer parametro, que es de lo que quiero sacar
+        # el modulo para pasarle a modxd (en este caso x)
+west:   sub $t2, $t2, 1
+        sw $t2, 16($fp)
+        # Aqui hago lo mismo pero el numero con el que se saca el modulo
+        # (en este caso width)
+        sw $a1, 12($fp)
+        # Hago un load address de la direccion de modxd
+        la $t1, modxd
+        # Con la direccion cargada hago un jump and link
         jalr $t1
-
-      	lw	$ra, 32($sp)
+        # Guardo el resultado en $t2
+        move $t2, $v0
+        # Voy a antes de deshacer el stack
+        b fin
+north:  sub $t3, $t3, 1
+        sw $t3, 16($fp)
+        sw $a2, 12($fp)
+        la $t1, modxd
+        jalr $t1
+        move $t3, $v0
+        b fin
+south:  add $t3, $t3, 1
+        sw $t3, 16($fp)
+        sw $a2, 12($fp)
+        la $t1, modxd
+        jalr $t1
+        move $t3, $v0
+        b fin
+east:   add $t2, $t2, 1
+        sw $t2, 16($fp)
+        sw $a1, 12($fp)
+        la $t1, modxd
+        jalr $t1
+        move $t2, $v0
+fin:    lw	$ra, 32($sp)
       	lw	$fp, 28($sp)
         add $sp, $sp, 40
         jr $ra

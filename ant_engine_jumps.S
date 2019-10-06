@@ -118,3 +118,15 @@ fin:    lw	ra, 32(sp)
         add sp, sp, 40
         jr ra
         .end move_forward
+
+
+.text
+.align 2
+.globl new_orientation
+.ent new_orientation
+.frame fp, 32, ra
+.cprestore 0
+new_orientation:
+    move v0, zero
+    jr ra
+.end new_orientation

@@ -2,54 +2,19 @@
 
 .text
 .align 2
-.ent modxd
-.frame fp, 32, ra
+.ent adjust
 .cprestore 0
-modxd:
-          # Creacion del stack
-          subu sp, sp, 32
-          sw fp, 28(sp)
-          sw gp, 24(sp)
-          move fp, sp
+adjust:
+    div     a1, a2        # value div limit
+    mfhi    t1            # t1 = value mod limit
+    sw t1, 0(a0)
+    jr ra
 
-          # Guardo parametros en stack de padre
-          sw a0, 32(fp)
-          sw a1, 36(fp)
-
-          
-          lw t0, 16(fp)
-          lw t1, 12(fp)
-
-          # Guardo el contenido de t0 en t2 para poder
-          # Ir decrementandolo sin perder el valor inicial
-          move t0, t2
-beggining:
-          # Le resto el valor que esta en t1 a t2, que puede
-          # tener el inicial o uno menor tras alguna iteracion
-          sub t1, t2, t1
-          # Si el resultado es mayor a cero vuelvo a iterar
-          bgtz t1, beggining
-          # Sumo el valor negativo o 0 a t1 para obtener el modulo
-fin_mod:  add t0, t1
-
-          # Deshago el stack
-          lw fp, 28(sp)
-          lw ra, 8(sp)
-          addu sp, sp, 8
-          jr ra
-
-          lw	fp,28(sp)
-
-          addiu	sp,sp,32
-          jr	ra
-
-          .end modxd
-
+.end adjust
 .text
 .align 2
 .globl move_forward
 .ent move_forward
-.frame fp, 32, ra
 .cprestore 0
 move_forward:
         # Creacion del stack
@@ -57,65 +22,76 @@ move_forward:
         sw	ra, 24(sp)
         sw fp, 28(sp)
         sw gp, 20(sp)
+
         move fp, sp
+#         # Guardo parametros en stack de padre
+         sw a0, 32(fp) # *ant
+         sw a1, 36(fp) # width
+         sw a2, 40(sp) #height
+        
+        sw s2, 20(fp) 
+        sw s3, 16(fp)
+        sw s4, 12(fp)
+        sw s5, 8(sp)
+        sw s6, 4(sp)
+#         # Se cargan x e y, asi como o
+        lw s2, 0(a0) #s2 -> x
+        lw s3, 4(a0) #s3 -> y
+        lw s4, 8(a0) #s4 -> orientation
 
-        # Guardo parametros en stack de padre
-        sw a0, 32(fp)
-        sw a1, 36(fp)
+        move s5, a1 # width
+        move s6, a2 # height
+#         # switch (orientation)
+        beq s4, 0, north #case 0 jump to north
+        beq s4, 1, south #case 1 jump to south
+        beq s4, 2, east #case 2 jump to east
+        beq s4, 3, west #case 3 jump to west
 
-        # Se cargan x e y, asi como o
-        lw t2, 0(a0)
-        lw t3, 4(a0)
-        lw t4, 8(a0)
+#         # Cada punto cardinal sabe con que parametros llamar a modulo,
+#         # si debe aumentar o decrementar y en que coordenada 
+#         # Voy a documentar solo west, el resto es analogo cambiando de
+#         # direccion o si es suma o resta
+#         # Aqui guardo el primer parametro, que es de lo que quiero sacar
+#         # el modulo para pasarle a adjust (en este caso x)
+west:   sub s2, s2, 1
+        move a1, s2 # a1 -> (ant->x -1 )
+        move a2, s5 #width
 
-        # Se hace un branch segun que orientacion tiene
-        beq t4, 0, north
-        beq t4, 1, south 
-        beq t4, 2, east 
-        beq t4, 3, west
+        jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->x -1, width) 
 
-        # Cada punto cardinal sabe con que parametros llamar a modulo,
-        # si debe aumentar o decrementar y en que coordenada 
-        # Voy a documentar solo west, el resto es analogo cambiando de
-        # direccion o si es suma o resta
-        # Aqui guardo el primer parametro, que es de lo que quiero sacar
-        # el modulo para pasarle a modxd (en este caso x)
-west:   sub t2, t2, 1
-        sw t2, 16(fp)
-        # Aqui hago lo mismo pero el numero con el que se saca el modulo
-        # (en este caso width)
-        sw a1, 12(fp)
-        # Hago un load address de la direccion de modxd
-        la t1, modxd
-        # Con la direccion cargada hago un jump and link
-        jalr t1
-        # Guardo el resultado en t2
-        move t2, v0
         # Voy a antes de deshacer el stack
         b fin
-north:  sub t3, t3, 1
-        sw t3, 16(fp)
-        sw a2, 12(fp)
-        la t1, modxd
-        jalr t1
-        move t3, v0
+
+north:  sub s3, s3, 1
+        move a1, s3 # a1 -> (ant->y -1 )
+        move a2, s6 #height
+        # jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->y -1, height) 
+
         b fin
-south:  add t3, t3, 1
-        sw t3, 16(fp)
-        sw a2, 12(fp)
-        la t1, modxd
-        jalr t1
-        move t3, v0
+south:  add s3, s3, 1
+        move a1, s3 # a1 -> (ant->y + 1)
+        move a2, s6 # height
+
+        #jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->y + 1, height) 
         b fin
-east:   add t2, t2, 1
-        sw t2, 16(fp)
-        sw a1, 12(fp)
-        la t1, modxd
-        jalr t1
-        move t2, v0
-fin:    lw	ra, 32(sp)
-      	lw	fp, 28(sp)
-        add sp, sp, 40
+east:   add s2, s2, 1
+        move a1,s2 # a1 -> (ant -> x + 1)
+        move a2, s5 # width
+
+        jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->s + 1, width)
+
+fin:
+
+        lw s2, 20(fp) 
+        lw s3, 16(fp)
+        lw s4, 12(fp)
+        lw s5, 8(sp)
+        lw s6, 4(sp)
+
+        lw fp, 28(sp)
+        lw ra, 24(sp)
+        add sp, sp, 32
+        move v0, a0
         jr ra
         .end move_forward
 
@@ -124,9 +100,9 @@ fin:    lw	ra, 32(sp)
 .align 2
 .globl new_orientation
 .ent new_orientation
-.frame fp, 32, ra
 .cprestore 0
 new_orientation:
-    move v0, zero
-    jr ra
+     #.frame fp, 32, ra
+     li v0, 2
+     jr ra
 .end new_orientation

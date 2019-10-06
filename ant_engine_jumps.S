@@ -1,4 +1,9 @@
 #include <sys/regdef.h>
+#define NORTH 0
+#define SOUTH 1 
+#define EAST 2
+#define WEST 3
+#define LEFT 0
 
 .text
 .align 2
@@ -7,6 +12,9 @@
 adjust:
     div     a1, a2        # value div limit
     mfhi    t1            # t1 = value mod limit
+    bgt		t1, zero, store # if result is greater than zero, store it
+    sub t1, zero, t1        # else, get absolute value and then store it
+store:    
     sw t1, 0(a0)
     jr ra
 
@@ -34,7 +42,9 @@ move_forward:
         sw s4, 12(fp)
         sw s5, 8(sp)
         sw s6, 4(sp)
+        sw s0, 0(sp)
 #         # Se cargan x e y, asi como o
+        move s0, a0
         lw s2, 0(a0) #s2 -> x
         lw s3, 4(a0) #s3 -> y
         lw s4, 8(a0) #s4 -> orientation
@@ -42,10 +52,10 @@ move_forward:
         move s5, a1 # width
         move s6, a2 # height
 #         # switch (orientation)
-        beq s4, 0, north #case 0 jump to north
-        beq s4, 1, south #case 1 jump to south
-        beq s4, 2, east #case 2 jump to east
-        beq s4, 3, west #case 3 jump to west
+        beq s4, NORTH, north #case 0 jump to north
+        beq s4, SOUTH, south #case 1 jump to south
+        beq s4, EAST, east #case 2 jump to east
+        beq s4, WEST, west #case 3 jump to west
 
 #         # Cada punto cardinal sabe con que parametros llamar a modulo,
 #         # si debe aumentar o decrementar y en que coordenada 
@@ -54,55 +64,113 @@ move_forward:
 #         # Aqui guardo el primer parametro, que es de lo que quiero sacar
 #         # el modulo para pasarle a adjust (en este caso x)
 west:   sub s2, s2, 1
+        move a0, s0  # a0 -> &ant->x
         move a1, s2 # a1 -> (ant->x -1 )
         move a2, s5 #width
 
-        jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->x -1, width) 
+        jal adjust # adjust(a0, a1, a2) = adjust ( &ant->x, ant->x -1, width) 
 
         # Voy a antes de deshacer el stack
         b fin
 
 north:  sub s3, s3, 1
+        add s0, s0, 4
+        move a0, s0 # a1 -> &ant->y
         move a1, s3 # a1 -> (ant->y -1 )
         move a2, s6 #height
-        # jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->y -1, height) 
+        jal adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 
         b fin
-south:  add s3, s3, 1
+south:  addu s3, s3, 1
+        addu s0, s0, 4
+        move a0, s0 # a1 -> &ant->y
         move a1, s3 # a1 -> (ant->y + 1)
         move a2, s6 # height
 
-        #jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->y + 1, height) 
+        jal adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y + 1, height) 
         b fin
 east:   add s2, s2, 1
+        move a0, s0 # a0 -> &ant->x
         move a1,s2 # a1 -> (ant -> x + 1)
         move a2, s5 # width
 
-        jal adjust # adjust(a0, a1, a2) = adjust ( *ant, ant->s + 1, width)
+        jal adjust # adjust(a0, a1, a2) = adjust ( &ant->x, ant->x + 1, width)
 
 fin:
-
+        lw s0, 0(fp)
         lw s2, 20(fp) 
         lw s3, 16(fp)
         lw s4, 12(fp)
         lw s5, 8(sp)
         lw s6, 4(sp)
-
+        lw s0, 0(sp)
+        
         lw fp, 28(sp)
         lw ra, 24(sp)
         add sp, sp, 32
-        move v0, a0
+        lw v0, 0(sp) # return the same a0 (*ant) value received as parameter.
         jr ra
         .end move_forward
 
+.text
+.align 2
+.ent decide
+decide:
+    beq a0, LEFT , return_left
+    b return_right
+return_left:
+    move v0, a1
+    jr ra
+return_right:
+    move v0, a2
+    jr ra
+.end decide
 
 .text
 .align 2
 .globl new_orientation
 .ent new_orientation
 .cprestore 0
+# norte, sur , east, weast
 new_orientation:
      #.frame fp, 32, ra
-     li v0, 2
+     sub sp, sp, 32
+     sw ra, 28(sp)
+     move t0, a0
+     move s1, a1
+
+     beq t0, NORTH , d_north #case 0 jump to north
+     beq t0, SOUTH , d_south #case 1 jump to south
+     beq t0, EAST , d_east #case 2 jump to east
+     beq t0, WEST , d_west #case 3 jump to west
+d_west:
+    move a0, s1
+    li a1, SOUTH
+    li a2, NORTH
+    jal decide
+    b end
+d_south:
+    move a0, s1
+    li a1, EAST
+    li a2, WEST
+    jal decide
+    b end
+d_north:
+    move a0, s1
+    li a1, WEST
+    li a2, EAST
+    jal decide
+    b end
+d_east:
+    move a0, s1
+    li a1, NORTH
+    li a2, SOUTH
+    jal decide
+    b end
+
+end:
+     lw ra, 28(sp)
+     add sp, sp, 32
      jr ra
 .end new_orientation
+

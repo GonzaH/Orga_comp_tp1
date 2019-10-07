@@ -11,8 +11,8 @@
     #define OW 3
 
     #define N_ORIENTATIONS 4
-    #define ORIENTATION_1 0
-    #define ORIENTATION_2 1
+    #define RL 0
+    #define RR 1
 
     //int neworientationmap[N_ORIENTATIONS][2] size, in bytes
     #define SZ_NEWORIENTATIONMAP (4 * 2 * N_ORIENTATIONS)
@@ -30,9 +30,9 @@
     #define O_FP(sp) (SS-4)(sp)
     #define O_GP(sp) (SS-8)(sp)
 
-    //Offset to the increments array (offset, coordinate, reg)
+    //Offset to the orientations array (orientation, rule, reg)
     #define O_NEWORIENTATIONMAP_START     (SS - SZ_NEWORIENTATIONMAP - SZ_FP - SZ_GP)
-    #define O_NEWORIENTATIONMAP(o, c, sp) (O_NEWORIENTATIONMAP_START + (o * 4) + (4 * c))(sp)
+    #define O_NEWORIENTATIONMAP(o, r, sp) (O_NEWORIENTATIONMAP_START + (o * 8) + (4 * r))(sp)
 
 new_orientation:
     
@@ -50,20 +50,26 @@ new_orientation:
     li  t2,OS
     li  t3,OE
     li  t4,OW
-    sw  t4,O_NEWORIENTATIONMAP(ON,ORIENTATION_1,sp) //{ {WEST,
-    sw  t3,O_NEWORIENTATIONMAP(ON,ORIENTATION_2,sp) //   EAST},
-    sw  t3,O_NEWORIENTATIONMAP(OS,ORIENTATION_1,sp) //  {EAST,
-    sw  t4,O_NEWORIENTATIONMAP(OS,ORIENTATION_2,sp) //   WEST},
-    sw  t1,O_NEWORIENTATIONMAP(OE,ORIENTATION_1,sp) //  {NORTH,
-    sw  t2,O_NEWORIENTATIONMAP(OE,ORIENTATION_2,sp) //   SOUTH},
-    sw  t2,O_NEWORIENTATIONMAP(OW,ORIENTATION_1,sp) //  {SOUTH,
-    sw  t1,O_NEWORIENTATIONMAP(OW,ORIENTATION_2,sp) //   NORTH}}
+    sw  t4,O_NEWORIENTATIONMAP(ON,RL,sp) //{ {WEST,
+    sw  t3,O_NEWORIENTATIONMAP(ON,RR,sp) //   EAST},
+    sw  t3,O_NEWORIENTATIONMAP(OS,RL,sp) //  {EAST,
+    sw  t4,O_NEWORIENTATIONMAP(OS,RR,sp) //   WEST},
+    sw  t1,O_NEWORIENTATIONMAP(OE,RL,sp) //  {NORTH,
+    sw  t2,O_NEWORIENTATIONMAP(OE,RR,sp) //   SOUTH},
+    sw  t2,O_NEWORIENTATIONMAP(OW,RL,sp) //  {SOUTH,
+    sw  t1,O_NEWORIENTATIONMAP(OW,RR,sp) //   NORTH}}
     
-    lw  t1,O_ARG0(sp)
-    lw  t2,O_ARG1(sp)
-    li  t3,O_NEWORIENTATIONMAP(t1,t2,sp)
-    addiu  v0,t3,0
-    addiu  sp,sp,SS              //  Destroy the stack frame  
+    addiu  t5,a0,0              // Cargo argumento 1
+    addiu  t6,a1,0              // Cargo argumento 2
+    sll    t5,t5,3              // t5 = t5 * 8
+    sll    t6,t6,2              // t6 = t6 * 4
+    addu   sp,sp,t5             // sp = sp + t5
+    addu   sp,sp,t6             // sp = sp + t6
+    lw     t7,0(sp)             // Cargo la direccion nueva
+    subu   sp,sp,t5             // Vuelvo a la posicion del SP
+    subu   sp,sp,t6             // Vuelvo a la posicion del SP
+    addiu  sp,sp,SS             // Destroy the stack frame  
+    addiu  v0,t7,0              // Devuelvo la direccion nueva
     jr ra
 
 .end new_orientation

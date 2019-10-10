@@ -32,7 +32,7 @@ move_forward:
         sw gp, 20(sp)
 
         move fp, sp
-#         # Guardo parametros en stack de padre
+        # Guardo parametros en stack de padre
          sw a0, 32(fp) # *ant
          sw a1, 36(fp) # width
          sw a2, 40(sp) #height
@@ -43,7 +43,7 @@ move_forward:
         sw s5, 8(sp)
         sw s6, 4(sp)
         sw s0, 0(sp)
-#         # Se cargan x e y, asi como o
+        # Se cargan x e y, asi como o
         move s0, a0
         lw s2, 0(a0) #s2 -> x
         lw s3, 4(a0) #s3 -> y
@@ -51,18 +51,13 @@ move_forward:
 
         move s5, a1 # width
         move s6, a2 # height
-#         # switch (orientation)
+        # switch (orientation)
         beq s4, NORTH, north #case 0 jump to north
         beq s4, SOUTH, south #case 1 jump to south
         beq s4, EAST, east #case 2 jump to east
         beq s4, WEST, west #case 3 jump to west
 
-#         # Cada punto cardinal sabe con que parametros llamar a modulo,
-#         # si debe aumentar o decrementar y en que coordenada 
-#         # Voy a documentar solo west, el resto es analogo cambiando de
-#         # direccion o si es suma o resta
-#         # Aqui guardo el primer parametro, que es de lo que quiero sacar
-#         # el modulo para pasarle a adjust (en este caso x)
+    #   add or substract depending on direction an call to adjust method to move
 west:   sub s2, s2, 1
         move a0, s0  # a0 -> &ant->x
         move a1, s2 # a1 -> (ant->x -1 )
@@ -70,7 +65,6 @@ west:   sub s2, s2, 1
 
         jal adjust # adjust(a0, a1, a2) = adjust ( &ant->x, ant->x -1, width) 
 
-        # Voy a antes de deshacer el stack
         b fin
 
 north:  sub s3, s3, 1
@@ -115,14 +109,28 @@ fin:
 .text
 .align 2
 .ent decide
+
 decide:
-    beq a0, LEFT , return_left
+    subu sp, sp, 8
+    sw gp, 0(sp)
+    sw fp, 4(sp)
+    sw a0, 8(sp)
+    sw a1, 12(sp)
+    sw a2, 16(sp)
+    
+    beq a0, LEFT , return_left # if rule == 0, turn_left
     b return_right
 return_left:
-    move v0, a1
+    move v0, a1 # return the left direction value
+    lw gp, 0(sp)
+    lw fp, 4(sp)
+    add sp, sp, 8
     jr ra
 return_right:
-    move v0, a2
+    move v0, a2 # else return the right direction value
+    lw gp, 0(sp)
+    lw fp, 4(sp)
+    add sp, sp, 8
     jr ra
 .end decide
 
@@ -131,10 +139,11 @@ return_right:
 .globl new_orientation
 .ent new_orientation
 .cprestore 0
-# norte, sur , east, weast
+
 new_orientation:
-     #.frame fp, 32, ra
      sub sp, sp, 32
+     sw gp, 20(sp)
+     sw fp, 24(sp)
      sw ra, 28(sp)
      move t0, a0
      move s1, a1
@@ -144,32 +153,34 @@ new_orientation:
      beq t0, EAST , d_east #case 2 jump to east
      beq t0, WEST , d_west #case 3 jump to west
 d_west:
-    move a0, s1
+    move a0, s1 # a0 -> rule
     li a1, SOUTH
     li a2, NORTH
-    jal decide
+    jal decide # decide(rule, SOUTH, NORTH)
     b end
 d_south:
     move a0, s1
     li a1, EAST
     li a2, WEST
-    jal decide
+    jal decide # decide(rule, EAST, WEST)
     b end
 d_north:
     move a0, s1
     li a1, WEST
     li a2, EAST
-    jal decide
+    jal decide # decide(rule, WEST, EAST)
     b end
 d_east:
     move a0, s1
     li a1, NORTH
     li a2, SOUTH
-    jal decide
+    jal decide # decide(rule, NORTH, SOUTH)
     b end
 
 end:
      lw ra, 28(sp)
+     lw gp, 20(sp)
+     lw fp, 24(sp)
      add sp, sp, 32
      jr ra
 .end new_orientation

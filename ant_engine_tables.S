@@ -96,11 +96,15 @@ store:
 .ent step_north
 .cprestore 0
 step_north:  
-    lw      a2,a1        // a2 = height
+    sw      ra,0(sp)
+    move      a2,a1        // a2 = height
     lw      a1,O_Y(a0)   // a1 = ant->y
     subu    a1,a1,1      // a1 = ant->y - 1
-    addiu   a0,a0,8      // a0 = &ant->y
-    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
+    addiu   a0,a0,4      // a0 = &ant->y
+    jal     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
+    subu a0,a0,4
+    lw  ra,0(sp)
+    jr  ra
 .end step_north
 
 .text
@@ -108,11 +112,15 @@ step_north:
 .ent step_south
 .cprestore 0
 step_south: 
-    lw      a2,a1        // a2 = height
+    sw      ra,0(sp)
+    move      a2,a1        // a2 = height
     lw      a1,O_Y(a0)   // a1 = ant->y
-    addiu    a1,a1,1      // a1 = ant->y - 1
-    addiu   a0,a0,8      // a0 = &ant->y
-    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
+    addiu    a1,a1,1      // a1 = ant->y + 1
+    addiu   a0,a0,4      // a0 = &ant->y
+    jal     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height)
+    subu a0,a0,4
+    lw ra,0(sp) 
+    jr ra
 .end step_south
 
 .text
@@ -120,10 +128,10 @@ step_south:
 .ent step_east
 .cprestore 0
 step_east:
-    lw      a2,a1        // a2 = height
+    move      a2,a1        // a2 = height
     lw      a1,O_X(a0)   // a1 = ant->x
     addiu    a1,a1,1      // a1 = ant->x + 1
-    addiu   a0,a0,4      // a0 = &ant->x
+    addiu   a0,a0,0      // a0 = &ant->x
     j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_east
 
@@ -132,11 +140,10 @@ step_east:
 .ent step_west
 .cprestore 0
 step_west:
-
-    lw      a2,a1        // a2 = height
+    move    a2,a1        // a2 = height
     lw      a1,O_X(a0)   // a1 = ant->x
     subu    a1,a1,1      // a1 = ant->x - 1
-    addiu   a0,a0,4      // a0 = &ant->x
+    addiu   a0,a0,0      // a0 = &ant->x
     j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_west
 
@@ -209,6 +216,7 @@ move_forward:
     subu sp,sp,s2
     lw  ra,O_RA(sp)
     addiu  sp,sp,SS             // Destroy the stack frame 
+    // subu   a0,a0,4
     addiu  v0,a0,0
     jr ra
 

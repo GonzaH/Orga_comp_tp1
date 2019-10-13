@@ -96,16 +96,11 @@ store:
 .ent step_north
 .cprestore 0
 step_north:  
-    sw a3,a2
-    // sub     s3, s3, 1
-    // add     s0, s0, 4
-    // sw      a0, (a0) # a1 -> &ant->y
-    // move    a1, s3 # a1 -> (ant->y -1 )
-    // move    a2, s6 #height
-    // sw      t0,ra
-    // jal     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
-    addu v0,a3,1
-    jr      t0
+    lw      a2,a1        // a2 = height
+    lw      a1,O_Y(a0)   // a1 = ant->y
+    subu    a1,a1,1      // a1 = ant->y - 1
+    addiu   a0,a0,8      // a0 = &ant->y
+    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_north
 
 .text
@@ -113,25 +108,23 @@ step_north:
 .ent step_south
 .cprestore 0
 step_south: 
-    sw a3,a2 
-    addu v0,a3,1
-    lw  s0,O_X(a0)      //ant->x
-    lw  s1,O_Y(a0)      //ant->y
-    lw  s2,O_O(a0)      //ant->o
-    jr ra
+    lw      a2,a1        // a2 = height
+    lw      a1,O_Y(a0)   // a1 = ant->y
+    addiu    a1,a1,1      // a1 = ant->y - 1
+    addiu   a0,a0,8      // a0 = &ant->y
+    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_south
 
 .text
 .align 2
 .ent step_east
 .cprestore 0
-step_east:  
-    sw a3,a2
-    addu v0,a3,2
-    lw  s0,O_X(a0)      //ant->x
-    lw  s1,O_Y(a0)      //ant->y
-    lw  s2,O_O(a0)      //ant->o
-    jr ra
+step_east:
+    lw      a2,a1        // a2 = height
+    lw      a1,O_X(a0)   // a1 = ant->x
+    addiu    a1,a1,1      // a1 = ant->x + 1
+    addiu   a0,a0,4      // a0 = &ant->x
+    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_east
 
 .text
@@ -139,12 +132,12 @@ step_east:
 .ent step_west
 .cprestore 0
 step_west:
-    sw a3,a2  
-    addu v0,a3,3
-    lw  s0,O_X(a0)      //ant->x
-    lw  s1,O_Y(a0)      //ant->y
-    lw  s2,O_O(a0)      //ant->o
-    jr ra
+
+    lw      a2,a1        // a2 = height
+    lw      a1,O_X(a0)   // a1 = ant->x
+    subu    a1,a1,1      // a1 = ant->x - 1
+    addiu   a0,a0,4      // a0 = &ant->x
+    j     adjust # adjust(a0, a1, a2) = adjust ( &ant->y, ant->y -1, height) 
 .end step_west
 
 .text

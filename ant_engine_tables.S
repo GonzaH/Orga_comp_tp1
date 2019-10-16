@@ -13,6 +13,10 @@
 #define O_Y(reg) (4)(reg)
 #define O_O(reg) (8)(reg)
 
+#define SZ_FP 4
+#define SZ_GP 4
+#define SZ_RA 4
+
 .text
 .align 2
 .globl new_orientation
@@ -21,32 +25,30 @@ new_orientation:
     
     //int neworientationmap[N_ORIENTATIONS][2] size, in bytes
     #define SZ_NEWORIENTATIONMAP (4 * 2 * N_ORIENTATIONS)
-    #define SZ_FP 4
-    #define SZ_GP 4
 
     //Stack size
-    #define SS (SZ_NEWORIENTATIONMAP + SZ_FP + SZ_GP)
+    #define SS_NEW (SZ_NEWORIENTATIONMAP + SZ_FP + SZ_GP)
 
     //Offset to each argument in the ABA
-    #define O_ARG0(sp) (SS + 0)(sp)
-    #define O_ARG1(sp) (SS + 4)(sp)
+    #define O_ARG0_NEW(sp) (SS_NEW + 0)(sp)
+    #define O_ARG1_NEW(sp) (SS_NEW + 4)(sp)
 
     //Offset to fp and gp
-    #define O_FP(sp) (SS-4)(sp)
-    #define O_GP(sp) (SS-8)(sp)
+    #define O_FP_NEW(sp) (SS_NEW-4)(sp)
+    #define O_GP_NEW(sp) (SS_NEW-8)(sp)
 
     //Offset to the orientations array (orientation, rule, reg)
-    #define O_NEWORIENTATIONMAP_START     (SS - SZ_NEWORIENTATIONMAP - SZ_FP - SZ_GP)
+    #define O_NEWORIENTATIONMAP_START     (SS_NEW - SZ_NEWORIENTATIONMAP - SZ_FP - SZ_GP)
     #define O_NEWORIENTATIONMAP(o, r, sp) (O_NEWORIENTATIONMAP_START + (o * 8) + (4 * r))(sp)
     
-    subu   sp,sp,SS   //Create the stack frame
+    subu   sp,sp,SS_NEW   //Create the stack frame
 
-    sw  a0,O_ARG0(sp) //Store a0 in the ABA
-    sw  a1,O_ARG1(sp) //Store a1 in the ABA
+    sw  a0,O_ARG0_NEW(sp) //Store a0 in the ABA
+    sw  a1,O_ARG1_NEW(sp) //Store a1 in the ABA
 
     //Store fp and gp
-    sw	fp,O_FP(sp)		//Store fp in the ABA
-    sw	gp,O_GP(sp)		//Store gp in the ABA
+    sw	fp,O_FP_NEW(sp)		//Store fp in the ABA
+    sw	gp,O_GP_NEW(sp)		//Store gp in the ABA
 
     //Build new_orientations array
     li  t1,ON
@@ -71,7 +73,7 @@ new_orientation:
     lw     t7,0(sp)             // Cargo la direccion nueva
     subu   sp,sp,t5             // Vuelvo a la posicion del SP
     subu   sp,sp,t6             // Vuelvo a la posicion del SP
-    addiu  sp,sp,SS             // Destroy the stack frame  
+    addiu  sp,sp,SS_NEW             // Destroy the stack frame  
     addiu  v0,t7,0              // Devuelvo la direccion nueva
     jr ra
 
@@ -155,25 +157,23 @@ step_west:
 move_forward:
 
     #define SZ_RELEVANTBOUNDS (4 * 4)
-    #define SZ_FP 4
-    #define SZ_GP 4
-    #define SZ_RA 4
+
 
     //Stack size
-    #define SS (SZ_RELEVANTBOUNDS + SZ_FP + SZ_GP + SZ_RA)
+    #define SS_MOVE (SZ_RELEVANTBOUNDS + SZ_FP + SZ_GP + SZ_RA)
 
     //Offset to each argument in the ABA
-    #define O_ARG0(sp) (SS + 0)(sp)
-    #define O_ARG1(sp) (SS + 4)(sp)
-    #define O_ARG2(sp) (SS + 8)(sp)
+    #define O_ARG0_MOVE(sp) (SS_MOVE + 0)(sp)
+    #define O_ARG1_MOVE(sp) (SS_MOVE + 4)(sp)
+    #define O_ARG2_MOVE(sp) (SS_MOVE + 8)(sp)
 
     //Offset to fp and gp
-    #define O_RA(sp) (SS-4)(sp)
-    #define O_FP(sp) (SS-8)(sp)
-    #define O_GP(sp) (SS-12)(sp)
+    #define O_RA_MOVE(sp) (SS_MOVE-4)(sp)
+    #define O_FP_MOVE(sp) (SS_MOVE-8)(sp)
+    #define O_GP_MOVE(sp) (SS_MOVE-12)(sp)
 
     //Offset
-    #define O_RELEVANTBOUNDS_START (SS - SZ_RELEVANTBOUNDS - SZ_FP - SZ_GP - SZ_RA)
+    #define O_RELEVANTBOUNDS_START (SS_MOVE - SZ_RELEVANTBOUNDS - SZ_FP - SZ_GP - SZ_RA)
     #define O_RELEVANTBOUNDS(pos, sp) (O_RELEVANTBOUNDS_START + (4 * pos))(sp)
 
     // Offset to ant_t structure
@@ -181,41 +181,41 @@ move_forward:
     #define O_Y(reg) (4)(reg)
     #define O_O(reg) (8)(reg)
 
-    subu   sp,sp,SS   //Create the stack frame
+    subu   sp,sp,SS_MOVE   //Create the stack frame
 
-    sw  a0,O_ARG0(sp) //Store a0 in the ABA
-    sw  a1,O_ARG1(sp) //Store a1 in the ABA
-    sw  a2,O_ARG2(sp) //Store a1 in the ABA
+    sw  a0,O_ARG0_MOVE(sp) //Store a0 in the ABA
+    sw  a1,O_ARG1_MOVE(sp) //Store a1 in the ABA
+    sw  a2,O_ARG2_MOVE(sp) //Store a1 in the ABA
 
     //Store fp and gp and ra
-    sw  ra,O_RA(sp)     //Store ra in the ABA
-    sw	fp,O_FP(sp)		//Store fp in the ABA
-    sw	gp,O_GP(sp)		//Store gp in the ABA
+    sw  ra,O_RA_MOVE(sp)     //Store ra in the ABA
+    sw	fp,O_FP_MOVE(sp)		//Store fp in the ABA
+    sw	gp,O_GP_MOVE(sp)		//Store gp in the ABA
 
     //Build new_orientations array
-    lw  t0,O_ARG0(sp) //ant
-    lw  t1,O_ARG1(sp) //Height
-    lw  t2,O_ARG2(sp) //Width
+    lw  t0,O_ARG0_MOVE(sp) //ant
+    lw  t1,O_ARG1_MOVE(sp) //Height
+    lw  t2,O_ARG2_MOVE(sp) //Width
     sw  t1,O_RELEVANTBOUNDS(0,sp) //heigth
     sw  t1,O_RELEVANTBOUNDS(1,sp) //heigth
     sw  t2,O_RELEVANTBOUNDS(2,sp) //width
     sw  t2,O_RELEVANTBOUNDS(3,sp) //width
     
-    lw  s0,O_X(a0)      //ant->x
-    lw  s1,O_Y(a0)      //ant->y
-    lw  s2,O_O(a0)      //ant->o
+    lw  t3,O_X(a0)      //ant->x
+    lw  t4,O_Y(a0)      //ant->y
+    lw  t5,O_O(a0)      //ant->o
 
-    sll s2,2                    //s2 = s2 * 4
-    addu  sp,sp,s2      //sp = sp + s2  para agarrar el relevantBounds[ant->o]
-    lw  t4,(sp)           //t4 = relevant_bounds[ant->o]
-    la  t6,allowed_forward  //t6 = allowed_forward[0]
-    addu t6,t6,s2           //t6 = allowed_forward[ant->o]
-    lw  t5,(t6)             //t5 = function
-    move  a1,t4             //a1= relevant_bound[ant->o]
-    jalr t5
-    subu sp,sp,s2
-    lw  ra,O_RA(sp)
-    addiu  sp,sp,SS             // Destroy the stack frame 
+    sll t5,2                    //t5 = t5 * 4
+    addu  sp,sp,t5      //sp = sp + t5  para agarrar el relevantBounds[ant->o]
+    lw  t6,(sp)           //t6 = relevant_bounds[ant->o]
+    la  t8,allowed_forward  //t8 = allowed_forward[0]
+    addu t8,t8,t5           //t8 = allowed_forward[ant->o]
+    lw  t7,(t8)             //t5 = function
+    move  a1,t6             //a1= relevant_bound[ant->o]
+    jalr t7
+    subu sp,sp,t5
+    lw  ra,O_RA_MOVE(sp)
+    addiu  sp,sp,SS_MOVE             // Destroy the stack frame 
     // subu   a0,a0,4
     addiu  v0,a0,0
     jr ra

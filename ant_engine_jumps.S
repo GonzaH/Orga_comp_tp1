@@ -10,12 +10,23 @@
 .ent adjust
 .cprestore 0
 adjust:
+    subu sp,sp, 8
+    sw fp, 0(sp)
+    sw gp, 4(sp)
+
+    sw a0, 8(sp) # Save Aba in caller stack
+    sw a1, 12(sp)
+    sw a2, 16(sp)
+
     div     a1, a2        # value div limit
     mfhi    t1            # t1 = value mod limit
     bgt		t1, zero, store # if result is greater than zero, store it
     sub t1, zero, t1        # else, get absolute value and then store it
 store:    
     sw t1, 0(a0)
+    lw fp, 0(sp)
+    lw gp, 4(sp)
+    addu sp, sp, 8
     jr ra
 
 .end adjust
@@ -26,23 +37,23 @@ store:
 .cprestore 0
 move_forward:
         # Creacion del stack
-        subu sp, sp, 32
-        sw	ra, 24(sp)
-        sw fp, 28(sp)
-        sw gp, 20(sp)
+        subu sp, sp, 48
+        sw	ra, 40(sp)
+        sw fp, 44(sp)
+        sw gp, 40(sp)
 
         move fp, sp
 #         # Guardo parametros en stack de padre
-         sw a0, 32(fp) # *ant
-         sw a1, 36(fp) # width
-         sw a2, 40(sp) #height
+         sw a0, 48(fp) # *ant
+         sw a1, 52(fp) # width
+         sw a2, 56(sp) #height
         
-        sw s2, 20(fp) 
-        sw s3, 16(fp)
-        sw s4, 12(fp)
-        sw s5, 8(sp)
-        sw s6, 4(sp)
-        sw s0, 0(sp)
+        sw s2, 36(fp) 
+        sw s3, 32(fp)
+        sw s4, 28(fp)
+        sw s5, 24(sp)
+        sw s6, 20(sp)
+        sw s0, 16(sp)
 #         # Se cargan x e y, asi como o
         move s0, a0
         lw s2, 0(a0) #s2 -> x
@@ -97,13 +108,12 @@ east:   add s2, s2, 1
         jal adjust # adjust(a0, a1, a2) = adjust ( &ant->x, ant->x + 1, width)
 
 fin:
-        lw s0, 0(fp)
-        lw s2, 20(fp) 
-        lw s3, 16(fp)
-        lw s4, 12(fp)
-        lw s5, 8(sp)
-        lw s6, 4(sp)
-        lw s0, 0(sp)
+        lw s2, 36(fp) 
+        lw s3, 32(fp)
+        lw s4, 28(fp)
+        lw s5, 24(sp)
+        lw s6, 20(sp)
+        lw s0, 16(sp)
         
         lw fp, 28(sp)
         lw ra, 24(sp)
@@ -116,6 +126,9 @@ fin:
 .align 2
 .ent decide
 decide:
+    subu sp,sp, 8
+    sw fp, 0(sp)
+    sw gp, 4(sp)
     beq a0, LEFT , return_left
     b return_right
 return_left:
@@ -123,6 +136,10 @@ return_left:
     jr ra
 return_right:
     move v0, a2
+
+    lw fp, 0(sp)
+    lw gp, 4(sp)
+    addu sp, sp, 8
     jr ra
 .end decide
 
@@ -133,7 +150,6 @@ return_right:
 .cprestore 0
 # norte, sur , east, weast
 new_orientation:
-     #.frame fp, 32, ra
      sub sp, sp, 32
      sw ra, 28(sp)
      move t0, a0

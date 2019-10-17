@@ -153,6 +153,7 @@ return_right:
 
 new_orientation:
      sub sp, sp, 32
+     sw s1, 16(sp)
      sw gp, 20(sp)
      sw fp, 24(sp)
      sw ra, 28(sp)
@@ -189,9 +190,10 @@ d_east:
     b end
 
 end:
-     lw ra, 28(sp)
+     lw s1, 16(sp)
      lw gp, 20(sp)
      lw fp, 24(sp)
+     lw ra, 28(sp)
      add sp, sp, 32
      jr ra
 .end new_orientation
